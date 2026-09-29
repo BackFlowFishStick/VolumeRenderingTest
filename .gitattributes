@@ -1,0 +1,20 @@
+# ============================================================
+# Git LFS：GitHub 单文件硬上限为 100MB，
+# SimpleITK 原生 DLL 超过该限制，必须走 LFS。
+# ============================================================
+UnityVolumeRendering/ThirdParty/SimpleITK/SimpleITKCSharpNative.dll filter=lfs diff=lfs merge=lfs -text
+
+# ============================================================
+# 文本文件换行符规范化
+# ============================================================
+* text=auto
+*.cs text
+*.shader text
+*.hlsl text
+*.md text
+*.json text
+*.asset text
+*.meta text
+*.yml text
+*.yaml text
+*.txt text
