@@ -60,5 +60,5 @@
 - 胸部 CT（Chest_CT.nrrd）：512×512×320，short，gzip，LPS，spacing 0.515/0.515/0.5，值域 -2048~1828。
 - 分割（Chest_Seg.nrrd）：同尺寸，unsigned char，**TotalSegmentator 标签方案**，数据中实际存在 61 个结构（CSV 定义 117 + 背景）。
 - `ReconstructionLabels.csv`：`"LabelValue","Name","Color_R/G/B/A",...`（颜色全是统一灰，实际配色在代码里生成）。
-- `STL/`：122 个按结构命名的 STL（名称与 TotalSegmentator 一致）。
+- `STL/`：61 个按结构命名的 STL（目录 122 文件含 .meta；名称与 TotalSegmentator 一致）。
 - `volume_rendering_presets/`：3D Slicer 风格 `CT-*.vp.json` 预设（格式契约待 Agent A/B 分析归档）。

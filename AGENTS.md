@@ -40,7 +40,7 @@
 | `lung/` | 320 张肺部 DICOM 序列（`fu (N).dcm`，约 512×512） |
 | `Chest_Reconstruction.mrb` | 3D Slicer 打包的胸部 CT（zip），解包工具见下 |
 | `Datasets/` | mrb 解包产物：`Chest_CT.nrrd`（CT 主体）、`Chest_Seg.nrrd`（TotalSegmentator 分割标注）、`ReconstructionLabels.csv`（标签表） |
-| `STL/` | **122 个按解剖结构拆分的 STL 网格**（文件名 = TotalSegmentator 结构名，与分割标注同名）。⚠️ 包不支持 STL，功能已搁置（D-007），仅作数据留存 |
+| `STL/` | **61 个按解剖结构拆分的 STL 网格**（文件名 = TotalSegmentator 结构名，与分割标注同名；目录共 122 文件含 .meta）。⚠️ 包不支持 STL，功能已搁置（D-007），仅作数据留存，**已入库** |
 | `volume_rendering_presets/` | 3D Slicer 风格的体渲染预设（`CT-*.vp.json`），已作为 Unity 资产导入 |
 
 ## 5. 关键工程事实（详见 kb/project-knowledge.md）
