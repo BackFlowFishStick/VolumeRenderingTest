@@ -15,12 +15,12 @@ namespace VolumeRenderingSample
     ///
     /// 说明：
     /// - 标签只保留数据中实际出现的结构（后台扫描一遍体素，约 84M 值）；
-    /// - 颜色不用 CSV 里的统一灰色，而是常用结构配色 + 其余按黄金比例色相生成，保证教学时区分度高；
+            /// - 颜色不用 CSV 里的统一灰色：骨骼统一暖白 RGB(255,251,240)，常用结构固定配色，其余按黄金比例色相生成；
     /// - 单结构显隐由 UI 改 SegmentationLabel.colour.a 后 SetSegmentationLabels 实现（包机制）。
     /// </summary>
     public static class SegmentationOverlayLoader
     {
-        // 高频教学结构的固定配色（其余结构自动生成稳定色相）
+        // 高频教学结构的固定配色（其余结构自动生成稳定色相；骨骼结构统一暖白色，见 BoneColour）
         private static readonly Dictionary<string, Color> CuratedColors = new Dictionary<string, Color>
         {
             { "heart",                  new Color(0.90f, 0.10f, 0.12f) },
@@ -33,9 +33,21 @@ namespace VolumeRenderingSample
             { "trachea",                new Color(0.60f, 0.85f, 0.40f) },
             { "esophagus",              new Color(0.85f, 0.60f, 0.30f) },
             { "spinal_cord",            new Color(0.95f, 0.85f, 0.30f) },
-            { "sternum",                new Color(0.95f, 0.95f, 0.55f) },
             { "liver",                  new Color(0.75f, 0.30f, 0.20f) },
         };
+
+        /// <summary>骨骼结构统一配色：RGB(255, 251, 240) 暖白（用户指定，2026-10-08）。</summary>
+        private static readonly Color BoneColour = new Color(255f / 255f, 251f / 255f, 240f / 255f);
+
+        /// <summary>骨骼结构名前缀（与 folder_viewer 的 bone() 筛选口径一致，sternum 单列）。</summary>
+        private static readonly string[] BoneNamePrefixes =
+        {
+            "rib_", "vertebrae_", "humerus_", "scapula_", "clavicula_", "costal_cartilages",
+        };
+
+        private static bool IsBone(string structureName) =>
+            structureName == "sternum"
+            || System.Linq.Enumerable.Any(BoneNamePrefixes, p => structureName.StartsWith(p));
 
         /// <summary>加载分割数据并叠加到目标体对象上。失败只记日志，不影响 CT 主体显示。</summary>
         public static async Task LoadAsync(VolumeRenderedObject target)
@@ -100,7 +112,8 @@ namespace VolumeRenderingSample
 
         /// <summary>
         /// 解析 TotalSegmentator 风格的标签 CSV（列：LabelValue, Name, Color_R/G/B/A, ...）。
-        /// 颜色不取 CSV（全为统一灰色）：优先用 CuratedColors，其余按黄金比例色相生成稳定配色。
+        /// 颜色不取 CSV（全为统一灰色）：骨骼统一暖白（BoneColour），其余优先 CuratedColors，
+        /// 再其余按黄金比例色相生成稳定配色。
         /// </summary>
         private static List<SegmentationLabel> ParseLabelsCsv(string csvPath)
         {
@@ -124,7 +137,9 @@ namespace VolumeRenderingSample
                 string name = fields[1].Trim('"');
 
                 Color colour;
-                if (!CuratedColors.TryGetValue(name, out colour))
+                if (IsBone(name))
+                    colour = BoneColour; // 骨骼（肋骨/椎骨/肩胛/锁骨/肱骨/肋软骨/胸骨）统一暖白
+                else if (!CuratedColors.TryGetValue(name, out colour))
                 {
                     // 黄金比例色相：相邻结构颜色拉开，且顺序稳定
                     colour = Color.HSVToRGB((colorIndex * 0.618034f) % 1f, 0.65f, 0.95f);
