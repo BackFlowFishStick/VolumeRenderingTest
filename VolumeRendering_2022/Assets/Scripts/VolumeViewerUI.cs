@@ -29,6 +29,11 @@ namespace VolumeRenderingSample
         // ---- 分割叠加（第二阶段）----
         private Vector2 segScrollPos;
 
+        // ---- Slicer vp.json 预设 ----
+        private Vector2 presetScrollPos;
+        private int selectedPresetIndex = -1;
+        private float presetHuShift = 0f;
+
         private void Awake()
         {
             loader = GetComponent<RuntimeVolumeLoader>();
@@ -243,10 +248,58 @@ namespace VolumeRenderingSample
                 if (GUILayout.Button("重置传递函数 (HU 预设)"))
                     loader.ApplyHounsfieldTransferFunction(active);
 
+                DrawSlicerPresetSection(active);
+
                 DrawSegmentationSection(active);
             }
 
             GUI.DragWindow();
+        }
+
+        /// <summary>
+        /// Slicer 预设区（StreamingAssets/volume_rendering_presets/*.vp.json）：
+        /// 选中即应用（-MIP 预设自动切 MIP 模式），阈值偏移 slider 对应 web 的 vrShift（-1000~1000 HU）。
+        /// </summary>
+        private void DrawSlicerPresetSection(VolumeRenderedObject active)
+        {
+            if (SlicerPresetLibrary.Presets == null)
+            {
+                if (GUILayout.Button("加载 Slicer 预设 (vp.json)"))
+                    SlicerPresetLibrary.LoadPresets();
+                return;
+            }
+
+            string[] names = SlicerPresetLibrary.PresetNames;
+            if (names == null || names.Length == 0)
+            {
+                GUILayout.Label("Slicer 预设：目录内无可解析的 .vp.json");
+                return;
+            }
+
+            GUILayout.Space(6f);
+            GUILayout.Label($"Slicer 预设 ({names.Length})");
+            presetScrollPos = GUILayout.BeginScrollView(presetScrollPos, GUILayout.Height(120f));
+            int newSelection = GUILayout.SelectionGrid(selectedPresetIndex, names, 1, GUI.skin.button);
+            GUILayout.EndScrollView();
+
+            GUILayout.BeginHorizontal();
+            GUILayout.Label("阈值偏移", GUILayout.Width(55f));
+            float newShift = GUILayout.HorizontalSlider(presetHuShift, -1000f, 1000f);
+            GUILayout.Label($"{presetHuShift:+0;-0;0} HU", GUILayout.Width(70f));
+            GUILayout.EndHorizontal();
+
+            bool presetChanged = newSelection != selectedPresetIndex;
+            bool shiftChanged = !Mathf.Approximately(newShift, presetHuShift);
+            if (presetChanged || shiftChanged)
+            {
+                selectedPresetIndex = newSelection;
+                presetHuShift = newShift;
+                if (selectedPresetIndex >= 0)
+                {
+                    SlicerPreset preset = SlicerPresetLibrary.Presets[selectedPresetIndex];
+                    SlicerPresetLibrary.ApplyTo(active, preset, presetHuShift);
+                }
+            }
         }
 
         /// <summary>分割结构控制区：显隐开关（改 alpha 重建第二传递函数）、隔离模式、结构列表。</summary>
