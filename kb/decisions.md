@@ -13,6 +13,7 @@
   2. **端点钳制语义**：显式补 (0, 首值) 与 (1, 末值) 控制点，复刻 Slicer 对控制点区间外的取端点行为；不补的话包 `GenerateTexture()` 会注入默认 (0, alpha=0)/(1, alpha=1)/(0/1, Color.white)，超出预设值域部分外观错误（骨骼全白全不透明）；
   3. **渲染模式跟随预设名**：`-MIP` 后缀自动切 MIP、普通预设切回 DVR（复刻 web A40 行为；只有 DVR 采样 TF alpha，kb 1.2）。
   另：阈值偏移（web vrShift）实现为控制点 HU 平移（`hu + shift` 后归一化）；gradientOpacity/lighting/isoSurfaceValues 不映射（依据 B#14 与 A 交叉核对结论），待后续 #14 可选项再评估。
+  **实测补充（2026-10-08 首轮验证）**：Slicer 导出的预设含双精度尾差重复控制点（x 与 x·(1+ε)，如 uCT-Bone-16bit 的 33600 / 33600.00000000001；DTI-FA-Brain 的 0 / 2.2e-308），两点的颜色/alpha 完全相同——解析按 float32 读取后二者自然重合，用 `Mathf.Approximately` 归并为一点（保留后者），仅 x 真回退才拒绝。原"严格递增否则拒绝"的校验因此放宽，否则 DTI-FA-Brain、uCT-Bone-16bit/8bit 三个预设被误拒（29/32 → 修正后 32/32）。
 
 ## 2026-09-29
 

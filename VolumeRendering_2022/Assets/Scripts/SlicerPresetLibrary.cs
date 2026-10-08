@@ -298,10 +298,21 @@ namespace VolumeRenderingSample
                     Debug.LogError($"[SlicerPresetLibrary] {fileName}: 颜色控制点非法（x={point.x}，color 元素数 {point.color?.Length ?? 0}）");
                     return false;
                 }
-                if (point.x <= lastX)
+                if (point.x < lastX && !Mathf.Approximately(point.x, lastX))
                 {
-                    Debug.LogError($"[SlicerPresetLibrary] {fileName}: 颜色控制点 x 非严格递增（{lastX} → {point.x}）");
+                    Debug.LogError($"[SlicerPresetLibrary] {fileName}: 颜色控制点 x 回退（{lastX} → {point.x}）");
                     return false;
+                }
+                if (Mathf.Approximately(point.x, lastX) && preset.colourPoints.Count > 0)
+                {
+                    // Slicer 导出常见双精度尾差重复点（x 与 x·(1+ε)，值相同）——归并为一点，保留后者
+                    preset.colourPoints[preset.colourPoints.Count - 1] = new SlicerPreset.ColourPoint
+                    {
+                        hu = point.x,
+                        colour = new Color(point.color[0], point.color[1], point.color[2], 1f),
+                    };
+                    lastX = point.x;
+                    continue;
                 }
                 // midpoint/sharpness 仅接受默认值（web 同契约）；非默认时警告但接受（包 1D TF 本就是线性插值）
                 WarnIfNonLinear(point.midpoint, point.sharpness, fileName, "颜色");
@@ -325,10 +336,17 @@ namespace VolumeRenderingSample
                     Debug.LogError($"[SlicerPresetLibrary] {fileName}: alpha 控制点非法（x={point.x}，y={point.y}）");
                     return false;
                 }
-                if (point.x <= lastX)
+                if (point.x < lastX && !Mathf.Approximately(point.x, lastX))
                 {
-                    Debug.LogError($"[SlicerPresetLibrary] {fileName}: alpha 控制点 x 非严格递增（{lastX} → {point.x}）");
+                    Debug.LogError($"[SlicerPresetLibrary] {fileName}: alpha 控制点 x 回退（{lastX} → {point.x}）");
                     return false;
+                }
+                if (Mathf.Approximately(point.x, lastX) && preset.opacityPoints.Count > 0)
+                {
+                    // 同上：尾差重复点归并，保留后者
+                    preset.opacityPoints[preset.opacityPoints.Count - 1] = new SlicerPreset.OpacityPoint { hu = point.x, alpha = point.y };
+                    lastX = point.x;
+                    continue;
                 }
                 WarnIfNonLinear(point.midpoint, point.sharpness, fileName, "alpha");
                 lastX = point.x;
