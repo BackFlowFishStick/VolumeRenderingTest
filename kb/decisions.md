@@ -2,7 +2,11 @@
 
 > 影响后续所有工作的决策按时间倒序记录在这里。Agent 有新决策时追加。
 
-## 2026-10-08（实现期）
+## 2026-10-08
+
+- **D-007 STL 功能搁置、vp.json 预设优先**：包对 STL 无任何支持（grep 零命中，B findings #5/#6/#7，工作量 2~3 天/1 天），用户决策**暂且搁置 STL**，实现顺序调整为：先完成 vp.json 预设导入（B#10+#9，分支 `feat/vp-json-preset-importer`），STL 待其验证合并后由主 Agent 单独排期。已同步标注 AGENTS.md §3/§4/§5，禁止 Agent 自行启动 STL 实现任务。（注：vp.json 导入器的实现决策见 D-006，随功能分支合并入档。）
+
+### 实现期（vp.json 分支）
 
 - **D-006 vp.json 预设导入器的三个口径选择**（分支 `feat/vp-json-preset-importer`，`SlicerPresetLibrary.cs`）：
   1. **归一化分母用数据集实际值域**（`dataset.GetMin/MaxDataValue()`，如 Chest -2048~1828），不用预设 `effectiveRange`——否则控制点无法落到包 TF 纹理的 [0,1] 纹理空间；
