@@ -4,7 +4,7 @@
 > 评估基准：Easy Volume Renderer v1.8.0（`UnityVolumeRendering/`，com.mlavik1.easyvolumerenderer）+ `VolumeRendering_2022/` 工程现状
 > 日期：2026-10-08
 
-**功能面来源说明**：初版由 Agent B 依据 `folder_viewer/使用说明.md` 归纳为 16 项。**2026-10-08 已与 Agent A 的 `kb/agent-a/findings-folder-viewer.md`（52 项、6 组）完成交叉核对**（详见文末"交叉核对"章节）：A 的 52 项中 33 项被初版矩阵覆盖，新增 19 行补充评估，并修正 2 处结论（OU 校正、3D 相机）。
+**功能面来源说明**：初版由 Agent B 依据 `folder_viewer/使用说明.md` 归纳为 16 项。**2026-10-08 已与 Agent A 的 `kb/agent-a/findings-folder-viewer.md`（52 项、6 组）完成交叉核对**（详见文末"交叉核对"章节）：A 的 52 项中 30 项映射到初版 16 行矩阵（含合并映射），其余 22 项仅由补充矩阵覆盖（新增 21 行），并修正 2 处结论（OU 校正、3D 相机）。
 
 ---
 
@@ -25,9 +25,9 @@
 | 9 | MIP 模式 + 按预设名（`-MIP` 后缀）自动切换 | 包支持：`Runtime/VolumeObject/RenderMode.cs`（MaximumIntensityProjectipon）、`VolumeRenderedObject.cs:619`（MODE_MIP keyword） | ✅ 直接可用 | 预设名含 "-MIP" 时调 `SetRenderMode(MIP)`，否则切回 DVR——两行 UI 逻辑，随 #10 一起做 | 0（并入 #10） |
 | 10 | .vp.json 预设导入（32 项：31 内置 + 1 快照）+ 阈值偏移 | **包无 vp.json 支持**：grep "vp.json"/"presets-all" 零命中；包只有自有 .asset 格式（`TransferFunctionDatabase.cs:85` SaveTransferFunction / `RuntimeTransferFunctionEditor.cs`） | ❌ 包缺口 | 自写解析器（格式分析见下节），映射到 `TransferFunction.colourControlPoints/alphaControlPoints`；**必须**在改完控制点后显式调 `GenerateTexture()`（kb 1.1 TF 缓存坑）；HU→归一化用 kb 1.4 公式对齐；阈值偏移 = 所有 alpha 控制点 x 平移后重生成纹理 | 1~2 天 |
 | 11 | 采样步长调节 | 包现成：`_SamplingRateMultiplier` Range(0.2, 2.0)（`DirectVolumeRenderingShader.shader:10`），由 `VolumeRenderedObject.cs:637` 写入；MAX_NUM_STEPS 512/1024（`VolumeRendering.hlsl:239,353,392`），即最多 1024 步——web 上限 1536 步（A findings #42），略低于 web 但 UI 上不可感知 | ✅ 直接可用 | UI 加一个 slider 即可 | 0.5 小时 |
-| 12 | 快速预览分辨率切换（256³ vs 原始 512） | 包的 `VolumeDataset.DownScaleData()` 是 public（`VolumeDataset.cs:203`），但只在超 2048 时自动触发（`FixDimensions()`，第 195 行） | 🛠️ | 加载后先对降采样副本建一版 VolumeObject 预览，切"原始分辨率"时用全量数据重建；或加载时缓存两份数据 | 0.5 天 |
+| 12 | 快速预览分辨率切换（256×256×160 预览档，最长边 256 vs 原始 512） | 包的 `VolumeDataset.DownScaleData()` 是 public（`VolumeDataset.cs:203`），但只在超 2048 时自动触发（`FixDimensions()`，第 195 行） | 🛠️ | 加载后先对降采样副本建一版 VolumeObject 预览，切"原始分辨率"时用全量数据重建；或加载时缓存两份数据 | 0.5 天 |
 | 13 | 体渲染裁切（三正交 + 自由切面裁切体渲染） | 包现成：`Runtime/VolumeObject/SlicingPlane.cs`、`CrossSectionPlane.prefab`、`CutoutBox.cs`/`CutoutSphere.cs`/`CrossSectionManager.cs`；工程已有 `SlicePlaneBinder.cs` 投屏/剖切 | ✅ 直接可用 | "反转保留方向"= 平面法线取反，SlicingPlane 可自由旋转/平移满足自由切面 | 0 |
-| 14 | 基本光照（diffuse/ambient/specular）、梯度不透明度、opacity unit distance 步长校正 | 部分现成：`LIGHTING_ON` + `calculateLighting()`（`VolumeRendering.hlsl:311-313`，ambient 硬编码 0.2，`DirectVolumeRenderingShader.shader:52`）；API 有 `SetLightingEnabled/LightSource/SetGradientLightingThreshold`（`VolumeRenderedObject.cs:333-416`）；梯度通道有 TF2D（`getTF2DColour`，`VolumeRendering.hlsl:139`）；**包 DVR 已有 alpha 步长校正**：`src.a = 1-pow(1-src.a, 1/_SamplingRateMultiplier)`（`VolumeRendering.hlsl:321-323`，与 web 的 `alpha=1−pow(1−a, dt·1000/unitDistance)` 同构），仅指数语义不同；但 vp.json 的 per-preset 光照参数与 gradientOpacity 线性函数无直接入口 | 🛠️ | OU 校正：把指数从 `1/multiplier` 换成 `dt·1000/unitDistance`（shader 一处公式 + 传参）；光照参数映射到 LightSource/shader 属性或自定义 shader 常量；gradientOpacity 可忽略（当前文件夹预设该函数为常数 1，无实际效果——实测 CT-Bones.vp.json gradientOpacity 两点均为 y=1.0，A 的 findings 亦确认被 web 忽略） | 1 天（可选优化） |
+| 14 | 基本光照（diffuse/ambient/specular）、梯度不透明度、opacity unit distance 步长校正 | 部分现成：`LIGHTING_ON` + `calculateLighting()`（`VolumeRendering.hlsl:311-313`，ambient 硬编码 0.2，`DirectVolumeRenderingShader.shader:52`）；API 有 `SetLightingEnabled/LightSource/SetGradientLightingThreshold`（`VolumeRenderedObject.cs:333-416`）；梯度通道有 TF2D（`getTF2DColour`，`VolumeRendering.hlsl:139`）；**包 DVR 已有 alpha 步长校正**：`src.a = 1-pow(1-src.a, 1/_SamplingRateMultiplier)`（`VolumeRendering.hlsl:321-323`，与 web 的 `alpha=1−pow(1−a, dt·1000/unitDistance)` 同构），仅指数语义不同；但 vp.json 的 per-preset 光照参数与 gradientOpacity 线性函数无直接入口 | 🛠️ | OU 校正：把指数从 `1/multiplier` 换成 `dt·1000/unitDistance`（shader 一处公式 + 传参）；光照参数映射到 LightSource/shader 属性或自定义 shader 常量；gradientOpacity 可忽略（31 个预设中 29 个恒为 1，例外 US-Fetal、uCT-Skull；22 个 CT-* 均为常数 1，对本工程 CT 预设无实际效果——web 侧实现了梯度不透明度功能，但当前预设数据下基本不生效） | 1 天（可选优化） |
 | 15 | 体渲染开启时隐藏 STL、关闭恢复 | 依赖 #5 | 🛠️ | UI 状态联动：开 DVR → STL 根节点 SetActive(false) 并记忆各结构显隐，关闭时恢复 | 0.5 小时（并入 #5） |
 | 16 | 模型与影像共用 LPS 坐标（不逐个居中） | 包 DICOM/NRRD 导入已处理方向矩阵与 spacing（`DICOMImporter.cs:274-280`；SimpleITK 后端）；NRRD 元数据含 LPS→RAS 空间信息 | ✅ 直接可用 | STL 侧在 #5 中复用同一 LPS→Unity 变换矩阵即可对齐 | 0（并入 #5） |
 
@@ -77,7 +77,7 @@ volumeProperties[0]:
 3. **归一化**：控制点 x 用 `(x - min) / (max - min)` 换算（kb 1.4）；建议除以数据实际值域（胸部 CT -2048~1828）而非 effectiveRange，使预设落在数据可显示范围；effectiveRange 可用于 alpha 归一化的分母（Slicer 语义）。两种口径需在实现时各试一次取效果正确者。
 4. **TF 缓存坑（kb 1.1）**：`CreateTransferFunction()` 已用默认控制点生成纹理缓存，填充控制点后**必须**调 `tf.GenerateTexture()`，否则拿到的是默认棕黄渐变。
 5. **渲染模式**：仅 DVR 读取 TF alpha（kb 1.2）；`CT-MIP`/`MR-MIP` 按名称切换 MIP 模式（对应 web 的 `-MIP` 后缀行为）；等值面模式无视 TF alpha，预设中的 `isoSurfaceValues` 无从生效。
-6. **不映射项与 web 一致**：midpoint/sharpness（包 1D TF 只有线性控制点；web 也明确提示"非默认 midpoint/sharpness 不支持"）、gradientOpacity（当前全为常数 1）、lighting 参数（可选映射，#14）、scatteringAnisotropy（web 未实现散射）。
+6. **不映射项与 web 一致**：midpoint/sharpness（包 1D TF 只有线性控制点；web 也明确提示"非默认 midpoint/sharpness 不支持"）、gradientOpacity（31 个预设中 29 个恒为 1，例外 US-Fetal、uCT-Skull；22 个 CT-* 均为常数 1）、lighting 参数（可选映射，#14）、scatteringAnisotropy（web 未实现散射）。
 7. `presets-all.json` 与同名原生 `.vp.json` 按名称去重、原生优先——加载器按文件遍历即可复刻该行为。
 
 结论：**31 个预设全部为 RGB + 线性控制点，可完整映射到包的 1D TransferFunction，无需包源码改动**。
@@ -116,9 +116,9 @@ volumeProperties[0]:
 
 ## 与 Agent A findings 的交叉核对（progress 第 8 步，2026-10-08）
 
-核对对象：`kb/agent-a/findings-folder-viewer.md`（52 项功能、6 组）及其解包产物 `unpicked-viewer-app.js` 等（A 已留档供 grep）。
+核对对象：`kb/agent-a/findings-folder-viewer.md`（52 项功能、6 组）及其解包产物 `unpacked-viewer-app.js` 等（A 已留档供 grep）。
 
-**核对结论**：A 的 52 项中有 33 项已被初版 16 行矩阵覆盖（含合并映射），**遗漏 19 项，全部补齐评估见下方补充矩阵**；原矩阵 2 处结论因 A 的发现而修正，**3 个 ❌ 缺口结论与建议实现顺序不变**。
+**核对结论**：A 的 52 项中，映射到初版 16 行矩阵的不同 A 项为 30 个（含合并映射，A28 并入 B#6、A38 并入 B#10），其余 22 项仅由下方补充矩阵覆盖（21 行，其中 A38 与 B#10 重复计入，B-d/B-e 各合并 2 项）；原矩阵 2 处结论因 A 的发现而修正，**3 个 ❌ 缺口结论与建议实现顺序不变**。本节已经 A 反向核对确认（A findings 第五节）。
 
 ### 覆盖映射（A 项 → B 矩阵行）
 
@@ -139,11 +139,11 @@ volumeProperties[0]:
 | A40（合成/MIP + `-MIP` 自动切换） | B#9（✅） |
 | A42（采样步长 0.5–2mm，上限 1536 步） | B#11（✅，已补充包上限 1024 步的差异说明） |
 | A43、44、45（OU 校正/梯度不透明度/光照） | B#14（🛠️，**已修正**：包 shader 已有同构 alpha 校正公式） |
-| A46（插值方式） | 新增 B-b 行（🛠️） |
+| A46（插值方式） | 新增 B-o 行（🛠️） |
 | A47（早终止） | 新增 B-q 行（✅） |
-| A16、18、21、22、23、24、25、28、30、31、34、48、49、50、51、52、2、3、9、12、13 | 补充矩阵（下表） |
+| A16、18、21、22、23、24、25、30、31、34、48、49、50、51、52、2、3、9、12、13 | 补充矩阵（下表） |
 
-### 补充矩阵（A 发现、初版矩阵遗漏的 19 项）
+### 补充矩阵（新增 21 行：初版矩阵未单列的 22 项 + A38 的 LUT 备注独立成行）
 
 | # | A 的功能 | UVR / 工程现状 | 结论 | 实现思路 | 工作量 |
 |---|---------|---------------|------|----------|--------|
@@ -169,7 +169,7 @@ volumeProperties[0]:
 | B-t | A51 自动化测试钩子（viewerTest/volumeTest） | 无对应物 | 🛠️ | Editor 菜单校验脚本（或 PlayMode 测试），输出与验证记录同构 JSON | 1 天（见下节） |
 | B-u | A52 明确不支持的输入给出错误 | 包导入器对不支持格式报错；.mrb 已有 `MrbExtractor.cs` 解包；kb 1.6 | ✅ 直接可用 | 无 | 0 |
 
-（B-c 之后行号顺延至 B-u，实际新增 21 行：19 项遗漏 + 2 项原矩阵备注独立成行。）
+（行号 B-a 顺延至 B-u，实际新增 21 行、覆盖 23 个 A 项：其中 22 项为初版矩阵未单列项（B-d、B-e 各合并 2 项，占 20 行），另 1 行 B-n 系 A38 由初版 B#10 备注独立成行、与 B#10 重复计入。）
 
 ### 修正的原结论
 
@@ -203,6 +203,6 @@ volumeProperties[0]:
 
 ### 交叉核对后的最终统计
 
-- 矩阵总行数：16（初版）+ 21（补充）= 37 行，覆盖 A 的 52 项（多项合并映射）。
+- 覆盖口径：映射到初版 16 行的不同 A 项 30 个 + 仅由补充矩阵覆盖的 22 个 = A 的 52 项（补充矩阵 21 行覆盖 23 项，A38 与 B#10 重复计入）；矩阵总行数：16（初版）+ 21（补充）= 37 行。
 - 结论分布：✅ 15 · 🛠️ 19 · ❌ 3（❌ 仍为 STL 加载/显隐筛选、vp.json 导入两项核心缺口及其依附项）。
 - 建议实现顺序**不变**：① vp.json 预设导入器 → ② STL 加载器+显隐 → ③ STL 裁切 shader → ④ 调窗/十字线/相机等 UI 增强 → ⑤ Editor 校验脚本（可提前到与 ①② 并行，因验收指标已明确）。
