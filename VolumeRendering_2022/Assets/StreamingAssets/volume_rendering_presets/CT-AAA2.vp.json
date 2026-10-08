@@ -1,0 +1,153 @@
+{
+    "@schema": "https://raw.githubusercontent.com/slicer/slicer/main/Modules/Loadable/VolumeRendering/Resources/Schema/volume-property-schema-v1.0.0.json#",
+    "volumeProperties": [
+        {
+            "effectiveRange": [0.0, 1600.0],
+            "isoSurfaceValues": [
+                0.0
+            ],
+            "independentComponents": true,
+            "interpolationType": "linear",
+            "useClippedVoxelIntensity": true,
+            "clippedVoxelIntensity": -10000000000.0,
+            "scatteringAnisotropy": 0.0,
+            "components": [
+                {
+                    "componentWeight": 1.0,
+                    "shade": true,
+                    "lighting": {
+                        "diffuse": 0.9,
+                        "ambient": 0.1,
+                        "specular": 0.2,
+                        "specularPower": 10.0
+                    },
+                    "disableGradientOpacity": false,
+                    "scalarOpacityUnitDistance": 1.0,
+                    "rgbTransferFunction": {
+                        "type": "colorTransferFunction",
+                        "points": [
+                            {
+                                "x": -3024.0,
+                                "color": [0.0, 0.0, 0.0],
+                                "midpoint": 0.5,
+                                "sharpness": 0.0
+                            },
+                            {
+                                "x": 129.542,
+                                "color": [0.54902, 0.25098, 0.14902],
+                                "midpoint": 0.5,
+                                "sharpness": 0.0
+                            },
+                            {
+                                "x": 145.244,
+                                "color": [0.6, 0.627451, 0.843137],
+                                "midpoint": 0.5,
+                                "sharpness": 0.0
+                            },
+                            {
+                                "x": 157.02,
+                                "color": [0.890196, 0.47451, 0.6],
+                                "midpoint": 0.5,
+                                "sharpness": 0.0
+                            },
+                            {
+                                "x": 169.918,
+                                "color": [0.992157, 0.870588, 0.392157],
+                                "midpoint": 0.5,
+                                "sharpness": 0.0
+                            },
+                            {
+                                "x": 395.575,
+                                "color": [1.0, 0.886275, 0.658824],
+                                "midpoint": 0.5,
+                                "sharpness": 0.0
+                            },
+                            {
+                                "x": 1578.73,
+                                "color": [1.0, 0.829256, 0.957922],
+                                "midpoint": 0.5,
+                                "sharpness": 0.0
+                            },
+                            {
+                                "x": 3071.0,
+                                "color": [0.827451, 0.658824, 1.0],
+                                "midpoint": 0.5,
+                                "sharpness": 0.0
+                            }
+                        ]
+                    },
+                    "scalarOpacity": {
+                        "type": "piecewiseLinearFunction",
+                        "points": [
+                            {
+                                "x": -3024.0,
+                                "y": 0.0,
+                                "midpoint": 0.5,
+                                "sharpness": 0.0
+                            },
+                            {
+                                "x": 129.542,
+                                "y": 0.0,
+                                "midpoint": 0.5,
+                                "sharpness": 0.0
+                            },
+                            {
+                                "x": 145.244,
+                                "y": 0.166667,
+                                "midpoint": 0.5,
+                                "sharpness": 0.0
+                            },
+                            {
+                                "x": 157.02,
+                                "y": 0.5,
+                                "midpoint": 0.5,
+                                "sharpness": 0.0
+                            },
+                            {
+                                "x": 169.918,
+                                "y": 0.627451,
+                                "midpoint": 0.5,
+                                "sharpness": 0.0
+                            },
+                            {
+                                "x": 395.575,
+                                "y": 0.8125,
+                                "midpoint": 0.5,
+                                "sharpness": 0.0
+                            },
+                            {
+                                "x": 1578.73,
+                                "y": 0.8125,
+                                "midpoint": 0.5,
+                                "sharpness": 0.0
+                            },
+                            {
+                                "x": 3071.0,
+                                "y": 0.8125,
+                                "midpoint": 0.5,
+                                "sharpness": 0.0
+                            }
+                        ]
+                    },
+                    "gradientOpacity": {
+                        "type": "piecewiseLinearFunction",
+                        "points": [
+                            {
+                                "x": 0.0,
+                                "y": 1.0,
+                                "midpoint": 0.5,
+                                "sharpness": 0.0
+                            },
+                            {
+                                "x": 255.0,
+                                "y": 1.0,
+                                "midpoint": 0.5,
+                                "sharpness": 0.0
+                            }
+                        ]
+                    }
+                }
+            ]
+        }
+    ]
+}
