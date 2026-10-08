@@ -43,3 +43,6 @@ sysinfo.txt
 # 本仓库工具/临时文件（不参与版本控制）
 .zcode/
 unity6_compile_check.log
+
+# folder_viewer/：WebGL 影像查看器分析输入（其中 STL 与 StreamingAssets/STL 重复，约 277MB），不入库
+folder_viewer/
