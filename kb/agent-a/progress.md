@@ -1,0 +1,42 @@
+# Agent A 进度 — folder_viewer 功能分析
+
+> 每完成一项把 `[ ]` 改为 `[x]`；新增工作追加到末尾。阻塞原因写在对应项下方。
+
+## 状态：分析完成（2026-10-08），待与 Agent B 交叉核对
+
+## 步骤清单
+
+- [x] 1. 读 `folder_viewer/使用说明.md`，提炼作者声明的功能面
+- [x] 2. 读 `folder_viewer/体渲染验证记录.json` 与 `验证记录.json`，提取已验证功能与参数
+- [x] 3. 预览截图 —— **部分受阻**：当前分析模型不支持图片输入，4 张 PNG 未能目视核对；UI 布局改为从 `unpacked-viewer-ui.html`（style+DOM）推断，功能定位不受影响（见 findings「附：信息缺口」）
+- [x] 4. 分析 `文件夹影像模型查看器.html`：
+  - [x] 4.1 技术栈：dicom-parser 1.8.12 + Three.js（minified build ≥ r150）；双层架构（外层选择页 + 内嵌 VIEWER_HTML 字符串经 iframe srcdoc 加载）
+  - [x] 4.2 数据加载链路：DICOM 扫描/分组/校验/HU 重建（picker.js readVolume）、STL 二进制+ASCII 解析（readSTL）、预设导入与 normalizePreset 校验
+  - [x] 4.3 体渲染实现：GLSL3 ShaderMaterial 光线投射（BackSide 盒子、Data3DTexture R32F、8192 项 1D TF LUT、1536 步上限、合成/MIP 双模式），app.js:64–75
+  - [x] 4.4 交互控件逐个列举：共 52 项功能，全部控件已定位到函数（findings 功能清单 A–F 表）
+  - [x] 4.5 裁切/切面/窗宽窗位：3 正交 + 1 自由切面裁切（clippingPlanes + shader clips[4] 同步）、WW/WL 滑动/数字/预设三入口、自由切面 320×320 三线性重切片
+- [x] 5. 归纳 `.vp.json` 格式契约（Slicer volume-property-schema v1.0.0；只取 volumeProperties[0].components[0]；控制点 6/4 元展开；midpoint=0.5/sharpness=0 强制；忽略字段清单；presets-all.json 汇总格式；同名去重原生优先）
+- [x] 6. 写出 `findings-folder-viewer.md`（按 playbook 模板）
+- [ ] 7. 与 Agent B 交叉核对映射表（B 完成后执行，记录核对结论）
+
+## 交付物
+
+- [x] `kb/agent-a/findings-folder-viewer.md`
+- [x] 解包源码产物（供 Agent B 交叉核对，引用行号基于这些文件）：
+  - `kb/agent-a/unpacked-viewer.html`（内层查看器完整 HTML）
+  - `kb/agent-a/unpacked-viewer-ui.html`（内层 UI 结构）
+  - `kb/agent-a/unpacked-viewer-app.js`（内层主程序 86 行，含 shader）
+  - `kb/agent-a/unpacked-picker.js`（外层选择页 JS）
+
+## 新发现的工作项 / 给 B 的提示
+
+- [ ] 体渲染 alpha 的 unit distance 校正（`alpha=1−pow(1−a, dt·1000/unitDistance)`）需确认 Easy Volume Renderer DVR 是否已做，未做则是 shader 改造点（findings §四.3）
+- [ ] 裁切平面同步进体渲染 shader（最多 4 平面收紧 ray 区间）需确认包内 DVR 是否支持裁切
+- [ ] `-MIP` 预设名后缀 → 自动切换投射模式的约定需在 Unity 侧复刻（若复现预设切换）
+- [ ] Unity 端验收可直接复用两个验证记录.json 的量化指标（findings §四.10）
+- [ ] （可选）若需要目视核对 4 张预览 PNG 的视觉效果，需由支持图片输入的会话补充确认
+
+## 阻塞 / 备注
+
+- 图片输入不受支持导致步骤 3 降级完成（以源码推断 UI 布局替代），不构成后续阻塞。
+- Three.js 精确小版本无法从 minified 代码提取（REVISION 被压缩改名），仅确定 ≥ r150（版权 2010–2023），不影响结论。
