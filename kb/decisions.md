@@ -2,6 +2,10 @@
 
 > 影响后续所有工作的决策按时间倒序记录在这里。Agent 有新决策时追加。
 
+## 2026-10-08
+
+- **D-007 STL 功能搁置、vp.json 预设优先**：包对 STL 无任何支持（grep 零命中，B findings #5/#6/#7，工作量 2~3 天/1 天），用户决策**暂且搁置 STL**，实现顺序调整为：先完成 vp.json 预设导入（B#10+#9，分支 `feat/vp-json-preset-importer`），STL 待其验证合并后由主 Agent 单独排期。已同步标注 AGENTS.md §3/§4/§5，禁止 Agent 自行启动 STL 实现任务。（注：vp.json 导入器的实现决策见 D-006，随功能分支合并入档。）
+
 ## 2026-09-29
 
 - **D-005 启用 Git 版本控制与分支工作流**：仓库位于工作区根（main 分支）。子 Agent 在 `agent-x/<任务名>` 等分支上开发与测试，**合并权在主 Agent**（--no-ff 合并、合并前检查、冲突回询实现者）；safe.directory 例外已配置；Unity 标准忽略规则已在 .gitignore。详见 AGENTS.md 第 7 节。
