@@ -115,6 +115,10 @@ namespace VolumeRenderingSample
             // huShift：查表位置平移 = 标量值方向反向平移控制点（等价于 web 在 transfer() 中平移查表下标）
             Func<float, float> norm = hu => Mathf.Clamp01((hu + huShift - min) / (max - min));
 
+            // 清掉旧 TF 对象（连同其纹理缓存）再重建，杜绝任何旧纹理残留；同时避免 ScriptableObject 泄漏
+            if (obj.transferFunction != null)
+                UnityEngine.Object.Destroy(obj.transferFunction);
+
             TransferFunction tf = TransferFunctionDatabase.CreateTransferFunction();
             tf.colourControlPoints.Clear();
             tf.alphaControlPoints.Clear();
@@ -134,6 +138,11 @@ namespace VolumeRenderingSample
             {
                 obj.SetRenderMode(targetMode);
                 Debug.Log($"[SlicerPresetLibrary] 预设 {preset.name} → 已切换渲染模式 {targetMode}");
+            }
+            else if (preset.IsMip && Mathf.Abs(huShift) > 0.01f)
+            {
+                // MIP 输出 float4(1,1,1,maxDensity)，完全不采样 TF（kb 1.2）——偏移在 MIP 下必然无视觉效果
+                Debug.LogWarning("[SlicerPresetLibrary] 当前处于 MIP 模式（不采样传递函数），阈值偏移不会有视觉效果；请先选一个非 -MIP 预设切回 DVR 再试偏移");
             }
 
             Debug.Log($"[SlicerPresetLibrary] 已应用预设 {preset.name}（颜色 {preset.colourPoints.Count} 点 / alpha {preset.opacityPoints.Count} 点，shift {huShift:+0;-0;0} HU）");
