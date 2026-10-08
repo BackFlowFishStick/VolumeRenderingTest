@@ -111,3 +111,98 @@ volumeProperties[0]:
 - vp.json 样例：`folder_viewer/volume_rendering_presets/CT-Bones.vp.json`（实测解析）、`CT-MIP.vp.json`
 - 工程现状：`VolumeRendering_2022/Assets/Scripts/`（RuntimeVolumeLoader / SegmentationOverlayLoader / VolumeViewerUI / SlicePlaneBinder / DatasetPathResolver）
 - STL 数据：`VolumeRendering_2022/Assets/StreamingAssets/STL/` 实测 122 个；`folder_viewer/STL/` 61 个（说明.md 称源目录 61 个、约 277 MiB）
+
+---
+
+## 与 Agent A findings 的交叉核对（progress 第 8 步，2026-10-08）
+
+核对对象：`kb/agent-a/findings-folder-viewer.md`（52 项功能、6 组）及其解包产物 `unpicked-viewer-app.js` 等（A 已留档供 grep）。
+
+**核对结论**：A 的 52 项中有 33 项已被初版 16 行矩阵覆盖（含合并映射），**遗漏 19 项，全部补齐评估见下方补充矩阵**；原矩阵 2 处结论因 A 的发现而修正，**3 个 ❌ 缺口结论与建议实现顺序不变**。
+
+### 覆盖映射（A 项 → B 矩阵行）
+
+| A 的项 | 映射到 |
+|--------|--------|
+| A1、4（DICOM 选择/解码→HU） | B#1（✅ 已实现） |
+| A5、6、7（STL 选择/解析/法线） | B#5（❌ 包缺口） |
+| A8（按名配色） | B#6 附注——工程 `SegmentationOverlayLoader.cs` 已实现代码配色（kb 4 节），✅ |
+| A10、11、38、41（预设导入/校验/切换/阈值偏移） | B#10（❌ 包缺口→自研） |
+| A14、15（三视图/滑块） | B#2（✅ 已实现） |
+| A17（十字线联动） | B#3（🛠️） |
+| A19、20（调窗拖动/数字输入） | B#4（🛠️） |
+| A26、27、29（模型显隐/骨骼器官筛选/整体不透明度；A28 搜索并入） | B#6（❌ 依赖 #5） |
+| A32、33、35（跟随切片裁切 STL/反转/自由切面裁切） | B#7（🛠️） |
+| A36（裁切同步体渲染 clips[4]） | B#13（✅ 包 SlicingPlane/CutoutBox/CrossSectionManager） |
+| A37（体渲染开关与 STL 恢复，modelRestore） | B#15（🛠️） |
+| A39（体数据纹理构建 256/512 档） | B#12（🛠️ 双分辨率） |
+| A40（合成/MIP + `-MIP` 自动切换） | B#9（✅） |
+| A42（采样步长 0.5–2mm，上限 1536 步） | B#11（✅，已补充包上限 1024 步的差异说明） |
+| A43、44、45（OU 校正/梯度不透明度/光照） | B#14（🛠️，**已修正**：包 shader 已有同构 alpha 校正公式） |
+| A46（插值方式） | 新增 B-b 行（🛠️） |
+| A47（早终止） | 新增 B-q 行（✅） |
+| A16、18、21、22、23、24、25、28、30、31、34、48、49、50、51、52、2、3、9、12、13 | 补充矩阵（下表） |
+
+### 补充矩阵（A 发现、初版矩阵遗漏的 19 项）
+
+| # | A 的功能 | UVR / 工程现状 | 结论 | 实现思路 | 工作量 |
+|---|---------|---------------|------|----------|--------|
+| B-a | A2 序列自动分组下拉（按 SeriesInstanceUID 多序列选择） | 工程当前固定加载 lung/chest 两套数据（`DatasetPathResolver.cs`），无序列选择 UI | 🛠️ | 沿用包 `DICOMImporter`（其内部即按 UID 分组），自建序列列表 UI | 1 天（当前数据固定，可不做） |
+| B-b | A3 序列合法性校验（方向 [1,0,0,0,1,0]、单帧、等间距、SOP 去重、内存上限） | 包/工程均无此类校验 | 🛠️ | 在导入入口加校验函数，报错即中止 | 0.5~1 天（可选增强） |
+| B-c | A9 模型-影像交叠检查（STL AABB 与体 AABB 相交） | 无 | 🛠️ | `Bounds.Intersects` 一处检查；工程数据已配准 | 0.5 小时（可选） |
+| B-d | A12、13 加载联控 / 更换数据文件夹 | 工程为运行时自举（`RuntimeVolumeLoader.cs`），无"更换数据"流程 | 🛠️ | 重入式加载（先 ClearSegmentations/销毁旧对象再加载） | 0.5 天 |
+| B-e | A16、22 三视图缩放（Shift+滚轮 0.3–8）与适应复位 | 工程 SliceUI 未见缩放实现 | 🛠️ | 三视图 RectTransform localScale + 滚轮事件 | 0.5 天 |
+| B-f | A18 HU 实时读数 | 无 | 🛠️ | 指针位置→体素索引→`dataset.GetData` 显示 HU | 0.5 天 |
+| B-g | A21 窗预设按钮（肺窗 [1500,-600] / 软组织 [400,40] / 骨窗 [1800,400]） | 无（工程 HU 预设是 TF 预设，非窗宽窗位） | 🛠️ | 并入 B#4 的 WW/WC，三个按钮设 material 参数 | 0.5 小时 |
+| B-h | A23 3D 场景内 CT 切片平面 + 不透明度 | ✅ 工程已实现：`SlicePlaneBinder.cs` 投屏（外挂 Plane 切片绑定） | ✅ 已实现 | 不透明度滑块为 material 参数，随手可加 | 0（+0.5 小时） |
+| B-i | A24 3D 轨道相机（拖动旋转/右键平移/滚轮缩放） | 工程 `CameraController.cs`（60 行）是**飞行式移动**（WASD+右键转向+shift 加速），不是轨道相机 | 🛠️ | 换标准 Orbit 脚本（target=体中心，theta/phi/radius） | 0.5~1 天 |
+| B-j | A25 视角预设 前/后/侧/斜 | 无 | 🛠️ | 在 B-i 的轨道相机上设 theta/phi 按钮 | 0.5 小时 |
+| B-k | A30 一键重置视图（层位/裁切/窗位/相机归位） | 无 | 🛠️ | 聚合上述各模块的 Reset 调用 | 0.5 小时 |
+| B-l | A31 自适应布局（ResizeObserver） | Unity 引擎天然满足（Game view + Canvas Scaler） | ✅ 直接可用 | 无 | 0 |
+| B-m | A34 自由角度切面斜切重采样图（320×320 三线性贴到斜面 mesh） | ✅ 工程已实现：`SlicePlaneBinder.cs` 支持任意姿态 Plane 的投屏与真实剖切 | ✅ 已实现 | 无 | 0 |
+| B-n | A38 预设控制点烘焙 8192 项 1D LUT | 包同类机制：`GenerateTexture()` 烘焙 TF 纹理（256 宽） | ✅ 直接可用 | 无需自写 LUT；注意 kb 1.1 缓存坑 | 0 |
+| B-o | A46 插值方式 nearest/linear（预设 `interpolationType`） | 包仅三线性（默认）+ 三立方（`SetCubicInterpolationEnabled`，`VolumeRenderedObject.cs:475`），**无 nearest 过滤**（grep nearest 于 Shaders 零命中） | 🛠️ | 当前 31 个预设全部 linear（A findings §3.1），实际无需处理；如需 nearest 再加 shader keyword | 可忽略 |
+| B-p | A48 有预设时自动启动体渲染 | 无自动启动 | 🛠️ | 在 `RuntimeVolumeLoader` 自举尾部调 SetRenderMode(DVR)+加载预设 | 0.5 小时 |
+| B-q | A47 早终止（accum.a>0.985 截断） | 包现成：`RAY_TERMINATE_ON` keyword + `SetRayTerminationEnabled`（`VolumeRenderedObject.cs:449-454`） | ✅ 直接可用 | 默认可开 | 0 |
+| B-r | A49 状态/错误提示 | Unity `Debug.Log` + 简单 UI 文本，trivial | ✅ 直接可用 | 随各功能顺带 | 0 |
+| B-s | A50 事件驱动按需渲染（无 RAF 常驻） | Unity 渲染循环由引擎管理，概念不适用 | ✅ 直接可用 | 无 | 0 |
+| B-t | A51 自动化测试钩子（viewerTest/volumeTest） | 无对应物 | 🛠️ | Editor 菜单校验脚本（或 PlayMode 测试），输出与验证记录同构 JSON | 1 天（见下节） |
+| B-u | A52 明确不支持的输入给出错误 | 包导入器对不支持格式报错；.mrb 已有 `MrbExtractor.cs` 解包；kb 1.6 | ✅ 直接可用 | 无 | 0 |
+
+（B-c 之后行号顺延至 B-u，实际新增 21 行：19 项遗漏 + 2 项原矩阵备注独立成行。）
+
+### 修正的原结论
+
+1. **B#14（OU 校正）**：初版写"包未必做此校正"——**错误**。包 DVR shader 已有同构的 alpha 步长校正（`VolumeRendering.hlsl:321-323`），只是指数由 `_SamplingRateMultiplier` 而非预设 `scalarOpacityUnitDistance` 决定。复现工作量从"新增 shader 逻辑"降为"改一处公式 + 传参"。
+2. **B-i（3D 相机）**：初版功能面未单列；核对后确认工程 `CameraController.cs` 为飞行式而非 web 的轨道式，若要复刻 web 手感需补轨道相机（0.5~1 天）。
+
+### 两个量化验证记录的复用性评估
+
+来源：`folder_viewer/验证记录.json` 与 `folder_viewer/体渲染验证记录.json`（由页面内置钩子 `window.viewerTest`/`window.volumeTest` 生成，A findings #51）。
+
+**可直接复用为 Unity 复现验收指标（强烈建议采用）**：
+
+| 指标 | 值 | Unity 侧断言方式 |
+|------|-----|-----------------|
+| `models: 61` + `triangles: 5815720` | 61 模型、5,815,720 三角形 | **STL 解析器最有力的自动化断言**：自研解析器批量读入 `StreamingAssets/STL/` 后 sum 三角形数应精确等于该值（二进制 STL 三角形数可整读），不等即解析错误 |
+| `dimensions: [512,512,320]` | 体数据维度 | DICOM/NRRD 加载后 dataset.dimX/Y/Z 相等 |
+| 预设 `count: 32`（31 预设 + 快照） | 32 | vp.json 解析器成功解析数量 |
+| `lung: [-1000, 2952]` | lung DICOM 体数据值域（slope/intercept 应用后） | 加载 lung 序列后 min/max 对比，验证 HU 换算正确（注意：这是 lung 数据集的值域；Chest NRRD 值域为 -2048~1828，kb 1.4，两套数据勿混） |
+| `clipping / mip / modelRestore / clippingPassed` | 均 true | 功能冒烟项：切面裁切、MIP 切换、体渲染关闭后 STL 显隐恢复各跑一次布尔断言 |
+| `unsupportedOrientationRejected: true` | 斜位序列被拒 | 若实现 B-b 校验，用倾斜 DICOM 样例断言拒绝 |
+| `errors: []` | 无错误 | 全流程跑完无异常 |
+
+**不可直接复用 / 需转化的项**：
+
+- `texture: [256,256,160]`：web 的 CPU 三线性重采样预览档位；Unity 用 GPU 直接采样原始体数据，无对应物（若做了 B#12 双分辨率，降采样档理论可比对，性价比低）。
+- `ctSamplesMatched: 100`：web 内部两次采样路径一致性检查，Unity 无对应双路径，不可比。
+- `networkRequests: []`：Web 专有，无意义。
+- **渲染像素级对比不可用**：web 自述不承诺与 Slicer 像素级一致（使用说明.md:23），Unity 渲染管线又不同，视觉验收只能人工对照 4 张 PNG。
+
+**落地建议**：写一个 Editor 菜单校验脚本（对应 B-t，1 天）：依次执行 STL 批量解析→比对 61/5815720、体数据加载→比对维度与值域、预设解析→比对 count=32，输出与验证记录同构的 JSON 便于 diff。这把 A 的验收基准变成回归测试，成本极低、收益高。
+
+### 交叉核对后的最终统计
+
+- 矩阵总行数：16（初版）+ 21（补充）= 37 行，覆盖 A 的 52 项（多项合并映射）。
+- 结论分布：✅ 15 · 🛠️ 19 · ❌ 3（❌ 仍为 STL 加载/显隐筛选、vp.json 导入两项核心缺口及其依附项）。
+- 建议实现顺序**不变**：① vp.json 预设导入器 → ② STL 加载器+显隐 → ③ STL 裁切 shader → ④ 调窗/十字线/相机等 UI 增强 → ⑤ Editor 校验脚本（可提前到与 ①② 并行，因验收指标已明确）。
