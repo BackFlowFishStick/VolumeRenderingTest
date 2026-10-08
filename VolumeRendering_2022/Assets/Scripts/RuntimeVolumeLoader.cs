@@ -93,7 +93,9 @@ namespace VolumeRenderingSample
                     VolumeDataset dataset = await importer.ImportSeriesAsync(series, settings);
                     if (dataset == null)
                         continue;
-                    await CreateVolumeObjectAsync(dataset, $"Lung_DICOM_{index++}", settings.progressHandler);
+                    // Lung 数据没有分割叠加：教学版预设把 CT 本体 alpha 全 0（只留给分割色显示），
+                    // 套在教学版上会让整个数据集不可见——这里用标准版预设
+                    await CreateVolumeObjectAsync(dataset, $"Lung_DICOM_{index++}", settings.progressHandler, teachingPreset: false);
                 }
             }
             catch (Exception e)
@@ -252,11 +254,11 @@ namespace VolumeRenderingSample
             Debug.Log($"[RuntimeVolumeLoader] 已为 {obj.name} 应用{(teachingPreset ? "教学版" : "标准版")}传递函数预设");
         }
 
-        private async Task<VolumeRenderedObject> CreateVolumeObjectAsync(VolumeDataset dataset, string objectName, IProgressHandler progress)
+        private async Task<VolumeRenderedObject> CreateVolumeObjectAsync(VolumeDataset dataset, string objectName, IProgressHandler progress, bool teachingPreset = true)
         {
             VolumeRenderedObject obj = await VolumeObjectFactory.CreateObjectAsync(dataset, progress);
             obj.name = objectName;
-            ApplyHounsfieldTransferFunction(obj);
+            ApplyHounsfieldTransferFunction(obj, teachingPreset);
 
             // 首个加载的自动显示并取景
             if (ActiveObject == null)
