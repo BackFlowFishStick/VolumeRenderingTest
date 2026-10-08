@@ -36,7 +36,7 @@
 | 功能 | 关键脚本 |
 | --- | --- |
 | 运行时自举（免改场景） | `Assets/Scripts/RuntimeVolumeLoader.cs`（`[RuntimeInitializeOnLoadMethod]`） |
-| Lung DICOM / Chest NRRD 运行时加载 | 同上（`LoadLungDicomAsync` / `LoadChestCtAsync`） |
+| Lung DICOM / Chest NRRD 运行时加载 | 同上（`LoadLungDicomAsync` / `LoadChestCtAsync`）。⚠️ Lung 无分割数据，加载即用**标准版**预设；教学版（alpha 全 0）套在无分割数据上会整体不可见（2026-10-08 已修，teachingPreset 参数） |
 | 分割叠加（61 结构、显隐/隔离） | `Assets/Scripts/SegmentationOverlayLoader.cs` + UI `VolumeViewerUI.cs` |
 | 切片查看器 UI（横/纵两视图 + slider） | `VolumeViewerUI.cs` + `Assets/Resources/Shaders/SliceUI.shader`（含分割色叠加） |
 | 外挂 Plane 切片绑定（投屏/真实剖切/跟随 SlicingPlane） | `Assets/Scripts/SlicePlaneBinder.cs` + `Editor/SliceBinderMenu.cs` |
