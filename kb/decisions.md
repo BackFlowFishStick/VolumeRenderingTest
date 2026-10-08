@@ -2,6 +2,14 @@
 
 > 影响后续所有工作的决策按时间倒序记录在这里。Agent 有新决策时追加。
 
+## 2026-10-08（实现期）
+
+- **D-006 vp.json 预设导入器的三个口径选择**（分支 `feat/vp-json-preset-importer`，`SlicerPresetLibrary.cs`）：
+  1. **归一化分母用数据集实际值域**（`dataset.GetMin/MaxDataValue()`，如 Chest -2048~1828），不用预设 `effectiveRange`——否则控制点无法落到包 TF 纹理的 [0,1] 纹理空间；
+  2. **端点钳制语义**：显式补 (0, 首值) 与 (1, 末值) 控制点，复刻 Slicer 对控制点区间外的取端点行为；不补的话包 `GenerateTexture()` 会注入默认 (0, alpha=0)/(1, alpha=1)/(0/1, Color.white)，超出预设值域部分外观错误（骨骼全白全不透明）；
+  3. **渲染模式跟随预设名**：`-MIP` 后缀自动切 MIP、普通预设切回 DVR（复刻 web A40 行为；只有 DVR 采样 TF alpha，kb 1.2）。
+  另：阈值偏移（web vrShift）实现为控制点 HU 平移（`hu + shift` 后归一化）；gradientOpacity/lighting/isoSurfaceValues 不映射（依据 B#14 与 A 交叉核对结论），待后续 #14 可选项再评估。
+
 ## 2026-09-29
 
 - **D-005 启用 Git 版本控制与分支工作流**：仓库位于工作区根（main 分支）。子 Agent 在 `agent-x/<任务名>` 等分支上开发与测试，**合并权在主 Agent**（--no-ff 合并、合并前检查、冲突回询实现者）；safe.directory 例外已配置；Unity 标准忽略规则已在 .gitignore。详见 AGENTS.md 第 7 节。
