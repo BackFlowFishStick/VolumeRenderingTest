@@ -34,6 +34,10 @@ namespace VolumeRenderingSample
         private int selectedPresetIndex = -1;
         private float presetHuShift = 0f;
 
+        // ---- STL 结构模型 ----
+        private Vector2 stlScrollPos;
+        private float stlOpacity = 1f;
+
         private void Awake()
         {
             loader = GetComponent<RuntimeVolumeLoader>();
@@ -250,6 +254,8 @@ namespace VolumeRenderingSample
 
                 DrawSlicerPresetSection(active);
 
+                DrawStlSection(active);
+
                 DrawSegmentationSection(active);
             }
 
@@ -300,6 +306,70 @@ namespace VolumeRenderingSample
                     SlicerPresetLibrary.ApplyTo(active, preset, presetHuShift);
                 }
             }
+        }
+
+        /// <summary>
+        /// STL 结构模型区（StreamingAssets/STL，来自 Chest_Seg 分割的同源网格）：
+        /// 加载/卸载、逐结构显隐、整体不透明度；模型作为 Chest CT 体对象的子级自动对齐。
+        /// </summary>
+        private void DrawStlSection(VolumeRenderedObject active)
+        {
+            StlModelLoader stlLoader = GetComponent<StlModelLoader>();
+            if (stlLoader == null)
+                stlLoader = gameObject.AddComponent<StlModelLoader>();
+
+            GUILayout.Space(6f);
+            GUILayout.Label($"STL 模型 ({stlLoader.ModelCount})");
+
+            if (stlLoader.IsLoading)
+            {
+                GUILayout.Label("STL 加载中（每帧一个结构，见 Console 进度）...");
+                return;
+            }
+
+            if (stlLoader.ModelCount == 0)
+            {
+                if (GUILayout.Button("加载 STL 模型（需先加载并选中 Chest CT）"))
+                    stlLoader.LoadAll(active);
+                return;
+            }
+
+            GUILayout.BeginHorizontal();
+            bool rootOn = stlLoader.IsRootVisible();
+            bool newRootOn = GUILayout.Toggle(rootOn, "整体显示", GUI.skin.button);
+            if (newRootOn != rootOn)
+                stlLoader.SetRootVisible(newRootOn);
+            if (GUILayout.Button("卸载"))
+                stlLoader.UnloadAll();
+            GUILayout.EndHorizontal();
+
+            GUILayout.BeginHorizontal();
+            if (GUILayout.Button("全部显示"))
+                stlLoader.SetAllVisible(true);
+            if (GUILayout.Button("全部隐藏"))
+                stlLoader.SetAllVisible(false);
+            GUILayout.EndHorizontal();
+
+            GUILayout.BeginHorizontal();
+            GUILayout.Label("不透明度", GUILayout.Width(60f));
+            float newOpacity = GUILayout.HorizontalSlider(stlOpacity, 0.05f, 1f);
+            GUILayout.Label(stlOpacity.ToString("0.00"), GUILayout.Width(40f));
+            GUILayout.EndHorizontal();
+            if (!Mathf.Approximately(newOpacity, stlOpacity))
+            {
+                stlOpacity = newOpacity;
+                stlLoader.SetOpacity(stlOpacity);
+            }
+
+            stlScrollPos = GUILayout.BeginScrollView(stlScrollPos, GUILayout.Height(150f));
+            for (int i = 0; i < stlLoader.ModelCount; i++)
+            {
+                bool visible = stlLoader.GetModelVisible(i);
+                bool newState = GUILayout.Toggle(visible, stlLoader.GetModelName(i));
+                if (newState != visible)
+                    stlLoader.SetModelVisible(i, newState);
+            }
+            GUILayout.EndScrollView();
         }
 
         /// <summary>分割结构控制区：显隐开关（改 alpha 重建第二传递函数）、隔离模式、结构列表。</summary>

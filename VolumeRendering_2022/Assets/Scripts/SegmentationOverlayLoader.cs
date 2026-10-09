@@ -111,6 +111,20 @@ namespace VolumeRenderingSample
         }
 
         /// <summary>
+        /// 结构配色统一入口：骨骼暖白 → CuratedColors → 黄金比例色相。
+        /// 分割 CSV 解析与 STL 模型加载器共用，保证同一结构两种呈现颜色一致。
+        /// fallbackIndex 供 HSV 兜底生成稳定色相（按调用方自己的稳定顺序编号）。
+        /// </summary>
+        public static Color GetStructureColour(string structureName, int fallbackIndex)
+        {
+            if (IsBone(structureName))
+                return BoneColour;
+            if (CuratedColors.TryGetValue(structureName, out Color colour))
+                return colour;
+            return Color.HSVToRGB((fallbackIndex * 0.618034f) % 1f, 0.65f, 0.95f);
+        }
+
+        /// <summary>
         /// 解析 TotalSegmentator 风格的标签 CSV（列：LabelValue, Name, Color_R/G/B/A, ...）。
         /// 颜色不取 CSV（全为统一灰色）：骨骼统一暖白（BoneColour），其余优先 CuratedColors，
         /// 再其余按黄金比例色相生成稳定配色。
@@ -136,15 +150,9 @@ namespace VolumeRenderingSample
 
                 string name = fields[1].Trim('"');
 
-                Color colour;
-                if (IsBone(name))
-                    colour = BoneColour; // 骨骼（肋骨/椎骨/肩胛/锁骨/肱骨/肋软骨/胸骨）统一暖白
-                else if (!CuratedColors.TryGetValue(name, out colour))
-                {
-                    // 黄金比例色相：相邻结构颜色拉开，且顺序稳定
-                    colour = Color.HSVToRGB((colorIndex * 0.618034f) % 1f, 0.65f, 0.95f);
-                    colorIndex++;
-                }
+                Color colour = GetStructureColour(name, colorIndex);
+                if (!IsBone(name) && !CuratedColors.ContainsKey(name))
+                    colorIndex++; // 仅 HSV 兜底的结构消耗色相序号，保持颜色稳定
 
                 labels.Add(new SegmentationLabel { id = id, name = name, colour = colour });
             }

@@ -31,7 +31,7 @@
 
 两个角色可并行；B 在 A 未完成时允许基于 `folder_viewer/使用说明.md` 和 HTML 源码自行归纳功能面，但**最终映射表必须与 A 的 findings 交叉核对一次**（在 progress.md 里记录核对状态）。
 
-> **⏸ 优先级调整（2026-10-08，详见 kb/decisions.md D-007）**：Easy Volume Rendering 包对 STL **无任何支持**（解析/加载/显隐/裁切全缺，B findings #5/#6/#7 及依附项）。**STL 相关功能暂且搁置**，任何 Agent 不得自行启动 STL 实现任务；vp.json 预设导入（B#10 + #9）**已完成并合并 main**（含 -MIP 自动切换与阈值偏移，用户已验证）。STL 待用户单独排期后再启动。
+> **▶ 优先级更新（2026-10-09，详见 kb/decisions.md D-008）**：vp.json 预设导入（B#10 + #9）**已完成并合并 main**（用户已验证）。STL 搁置（D-007）**已解除**：用户批准按 kb/stl-package-research.md 的 pb_Stl 拷源码方案实现 STL 加载（分支 `feat/stl-loader`，进行中）。注意：STL 裁切 shader（B#7）与"体渲染开启时隐藏 STL"（B#15）尚未实现，不得在未排期下自行启动。
 
 ## 4. 数据资产（VolumeRendering_2022/Assets/StreamingAssets/）
 
@@ -40,12 +40,12 @@
 | `lung/` | 320 张肺部 DICOM 序列（`fu (N).dcm`，约 512×512） |
 | `Chest_Reconstruction.mrb` | 3D Slicer 打包的胸部 CT（zip），解包工具见下 |
 | `Datasets/` | mrb 解包产物：`Chest_CT.nrrd`（CT 主体）、`Chest_Seg.nrrd`（TotalSegmentator 分割标注）、`ReconstructionLabels.csv`（标签表） |
-| `STL/` | **61 个按解剖结构拆分的 STL 网格**（文件名 = TotalSegmentator 结构名，与分割标注同名；目录共 122 文件含 .meta）。⚠️ 包不支持 STL，功能已搁置（D-007），仅作数据留存，**已入库** |
+| `STL/` | **61 个按解剖结构拆分的 STL 网格**（文件名 = TotalSegmentator 结构名，与分割标注同名；目录共 122 文件含 .meta）。STL 加载功能实现中（D-008，分支 feat/stl-loader），**已入库** |
 | `volume_rendering_presets/` | 3D Slicer 风格的体渲染预设（`CT-*.vp.json`），已作为 Unity 资产导入 |
 
 ## 5. 关键工程事实（详见 kb/project-knowledge.md）
 
-- 包 v1.8.0：支持 DICOM/NRRD/NIfTI/RAW；**不支持 .mrb / .vti / .vtk / STL**（STL 缺口已决策搁置，见 D-007）；NRRD 依赖 SimpleITK（2022 工程已启用）。
+- 包 v1.8.0：支持 DICOM/NRRD/NIfTI/RAW；**不支持 .mrb / .vti / .vtk / STL**（.mrb 工程内解包；STL 走工程内 pb_Stl 拷源码加载器，见 D-008）；NRRD 依赖 SimpleITK（2022 工程已启用）。
 - 只有 DVR 模式读取 TF 的 alpha；等值面强制不透明、MIP 完全不采样 TF。
 - `CreateTransferFunction()` 会预生成默认 TF 纹理缓存，修改控制点后必须调 `GenerateTexture()`。
 - 已完成功能：DICOM/NRRD 运行时加载、分割叠加（61 结构显隐/隔离）、切片查看器 UI、教学版 HU 预设、mrb 解包菜单、**Slicer `.vp.json` 预设导入器**（32 预设、-MIP 自动切换、阈值偏移 ±1000 HU；`SlicerPresetLibrary.cs` + Editor 校验菜单，2026-10-08 合并）。

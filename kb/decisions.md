@@ -2,6 +2,14 @@
 
 > 影响后续所有工作的决策按时间倒序记录在这里。Agent 有新决策时追加。
 
+## 2026-10-09
+
+- **D-008 解除 STL 搁置、采用 pb_Stl 拷源码方案**（分支 `feat/stl-loader`）：用户决策解除 D-007 搁置。调研（kb/stl-package-research.md）确认现成方案 pb_Stl（MIT，github.com/karl-/pb_Stl）可覆盖解析器全部工作，选**拷源码进工程**（非 git 依赖，MIT 允许、可直接改造），自研工作量 2~3 天压缩到约 1 天。关键技术结论（源码调研，详见 StlModelLoader.cs 注释）：
+  1. 包的 SimpleITK 导入器做了 `DICOMOrient("RSA")`，dataset 轴为 R/S/A（非 NRRD 原始 LPS），`rotation` 字段恒 identity；
+  2. 体渲染 shader 以容器局部 ±0.5 空间采样（uvw = vertexLocal + 0.5，无轴翻转）；
+  3. STL 对齐链：LPS → RSA 体素索引（i_R=(nL−1)−(x−ox)/sx，j_S=(z−oz)/sz，k_A=(nP−1)−(y−oy)/sy）→ 容器局部 ((idx+0.5)/dim−0.5)；LPS 参数从 Chest_CT.nrrd ASCII 头解析（包不保留空间信息）；映射经分割质心 vs STL 质心互校（胸骨 <1mm）；
+  4. 顶点烘入网格而非挂 Transform（容器 scale 为非均匀米制缩放，会破坏法线）。
+
 ## 2026-10-08
 
 - **D-007 STL 功能搁置、vp.json 预设优先**：包对 STL 无任何支持（grep 零命中，B findings #5/#6/#7，工作量 2~3 天/1 天），用户决策**暂且搁置 STL**，实现顺序调整为：先完成 vp.json 预设导入（B#10+#9，分支 `feat/vp-json-preset-importer`），STL 待其验证合并后由主 Agent 单独排期。已同步标注 AGENTS.md §3/§4/§5，禁止 Agent 自行启动 STL 实现任务。（注：vp.json 导入器的实现决策见 D-006，随功能分支合并入档。）
