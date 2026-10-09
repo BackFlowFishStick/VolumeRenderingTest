@@ -43,6 +43,7 @@
 | mrb 解包 | `Assets/Scripts/Editor/MrbExtractor.cs` |
 | HU 传递函数预设（教学版=只看分割色；标准版） | `RuntimeVolumeLoader.ApplyHounsfieldTransferFunction` |
 | Slicer `.vp.json` 预设导入（32 个、-MIP 自动切换、阈值偏移 ±1000 HU；Editor 校验菜单 Tools/Volume Rendering/校验 Slicer 预设解析） | `Assets/Scripts/SlicerPresetLibrary.cs` + `VolumeViewerUI.DrawSlicerPresetSection` |
+| STL 结构模型加载（61 网格、pb_Stl 拷源码、RSA 轴映射对齐、逐结构显隐/透明度；2026-10-09 用户验证） | `Assets/Scripts/Stl/`（pb_Stl，MIT）+ `StlModelLoader.cs` |
 | 分割配色：骨骼结构统一暖白 RGB(255,251,240)（rib_/vertebrae_/humerus_/scapula_/clavicula_/costal_cartilages 前缀 + sternum；2026-10-08 用户指定并验证） | `SegmentationOverlayLoader.BoneColour` + `IsBone` |
 | 数据路径解析（StreamingAssets 优先） | `Assets/Scripts/DatasetPathResolver.cs` |
 
