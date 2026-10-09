@@ -26,6 +26,13 @@ namespace VolumeRenderingSample
         private float slicePosY = 0.5f;
         private bool sliceViewerBroken;
 
+        // ---- 调窗与十字线 ----
+        private float slicePosX = 0.5f;                 // 面内 X 位置（两视图的水平轴，仅十字线联动用）
+        private bool showCrosshair = true;
+        private float windowWidth = 1f;                 // 窗宽（HU）
+        private float windowCenter = 0.5f;              // 窗位（HU）
+        private VolumeRenderedObject windowInitFor;     // 窗参数按哪个数据集初始化（切换数据集时重置为中性窗）
+
         // ---- 分割叠加（第二阶段）----
         private Vector2 segScrollPos;
 
@@ -109,6 +116,20 @@ namespace VolumeRenderingSample
             }
             sliceUIMat.SetFloat("_UseSegmentation", hasSeg ? 1f : 0f);
 
+            // 调窗（WW/WC）：切换数据集时重置为中性窗（窗宽=全值域，窗位=中点，等效无窗）
+            float dataMin = active.dataset.GetMinDataValue();
+            float dataMax = active.dataset.GetMaxDataValue();
+            if (windowInitFor != active)
+            {
+                windowInitFor = active;
+                windowCenter = (dataMin + dataMax) * 0.5f;
+                windowWidth = Mathf.Max(dataMax - dataMin, 1f);
+            }
+            sliceUIMat.SetFloat("_DataMin", dataMin);
+            sliceUIMat.SetFloat("_DataMax", dataMax);
+            sliceUIMat.SetFloat("_WindowCenter", windowCenter);
+            sliceUIMat.SetFloat("_WindowWidth", windowWidth);
+
             sliceUIMat.SetFloat("_Axis", 2f); // 横向：沿 Z 轴
             sliceUIMat.SetFloat("_SlicePos", slicePosZ);
             Graphics.Blit(Texture2D.whiteTexture, axialRT, sliceUIMat);
@@ -134,26 +155,131 @@ namespace VolumeRenderingSample
                 return;
             }
 
+            float dataMin = active.dataset.GetMinDataValue();
+            float dataMax = active.dataset.GetMaxDataValue();
+            Event guiEvent = Event.current;
+
             GUILayout.BeginHorizontal();
 
+            // 横向（轴状，沿 Z）：shader dataCoord=(uv.x, uv.y, pos) → 面内水平=X、垂直=Y
             GUILayout.BeginVertical(GUILayout.Width(210f));
-            GUILayout.Label("横向切片（沿 Z 轴）");
+            GUILayout.Label("横向切片（沿 Z 轴）· 左键定位十字线，右键拖动调窗");
             Rect axialRect = GUILayoutUtility.GetRect(200f, 200f);
-            GUI.DrawTexture(axialRect, axialRT, ScaleMode.ScaleToFit, false);
+            Rect axialContent = FitContentRect(axialRect, active.dataset.dimX, active.dataset.dimY);
+            GUI.DrawTexture(axialContent, axialRT, ScaleMode.StretchToFill, false);
+            HandleSliceViewEvents(axialContent, true, guiEvent, dataMin, dataMax);
+            if (showCrosshair)
+                DrawCrosshair(axialContent, slicePosX, slicePosY);
             slicePosZ = GUILayout.HorizontalSlider(slicePosZ, 0f, 1f);
-            GUILayout.Label($"层位置 {slicePosZ:0.00}");
+            GUILayout.Label($"层位置 Z {slicePosZ:0.00}");
             GUILayout.EndVertical();
 
+            // 纵向（冠状，沿 Y）：shader dataCoord=(uv.x, pos, uv.y) → 面内水平=X、垂直=Z
             GUILayout.BeginVertical(GUILayout.Width(210f));
-            GUILayout.Label("纵向切片（沿 Y 轴）");
+            GUILayout.Label("纵向切片（沿 Y 轴）· 左键定位十字线，右键拖动调窗");
             Rect coronalRect = GUILayoutUtility.GetRect(200f, 200f);
-            GUI.DrawTexture(coronalRect, coronalRT, ScaleMode.ScaleToFit, false);
+            Rect coronalContent = FitContentRect(coronalRect, active.dataset.dimX, active.dataset.dimZ);
+            GUI.DrawTexture(coronalContent, coronalRT, ScaleMode.StretchToFill, false);
+            HandleSliceViewEvents(coronalContent, false, guiEvent, dataMin, dataMax);
+            if (showCrosshair)
+                DrawCrosshair(coronalContent, slicePosX, slicePosZ);
             slicePosY = GUILayout.HorizontalSlider(slicePosY, 0f, 1f);
-            GUILayout.Label($"层位置 {slicePosY:0.00}");
+            GUILayout.Label($"层位置 Y {slicePosY:0.00}");
             GUILayout.EndVertical();
 
             GUILayout.EndHorizontal();
+
+            // ---- 调窗（WW/WC）----
+            GUILayout.Space(4f);
+            GUILayout.BeginHorizontal();
+            GUILayout.Label($"窗宽 {windowWidth:0}", GUILayout.Width(80f));
+            windowWidth = GUILayout.HorizontalSlider(windowWidth, 1f, Mathf.Max((dataMax - dataMin) * 2f, 2f));
+            GUILayout.EndHorizontal();
+            GUILayout.BeginHorizontal();
+            GUILayout.Label($"窗位 {windowCenter:0}", GUILayout.Width(80f));
+            windowCenter = GUILayout.HorizontalSlider(windowCenter, dataMin, dataMax);
+            GUILayout.EndHorizontal();
+            GUILayout.BeginHorizontal();
+            if (GUILayout.Button("肺窗"))
+            {
+                windowWidth = 1500f;
+                windowCenter = -600f;
+            }
+            if (GUILayout.Button("软组织"))
+            {
+                windowWidth = 400f;
+                windowCenter = 40f;
+            }
+            if (GUILayout.Button("骨窗"))
+            {
+                windowWidth = 1800f;
+                windowCenter = 400f;
+            }
+            if (GUILayout.Button("复位"))
+            {
+                windowWidth = Mathf.Max(dataMax - dataMin, 1f);
+                windowCenter = (dataMin + dataMax) * 0.5f;
+            }
+            bool newShowCross = GUILayout.Toggle(showCrosshair, "十字线", GUI.skin.button);
+            if (newShowCross != showCrosshair)
+                showCrosshair = newShowCross;
+            GUILayout.EndHorizontal();
+
             GUI.DragWindow();
+        }
+
+        /// <summary>按内容宽高比计算图像实际绘制区（等比适配并在给定矩形内居中），保证点击换算与画面一致。</summary>
+        private static Rect FitContentRect(Rect rect, float contentW, float contentH)
+        {
+            float scale = Mathf.Min(rect.width / contentW, rect.height / contentH);
+            float w = contentW * scale;
+            float h = contentH * scale;
+            return new Rect(rect.x + (rect.width - w) * 0.5f, rect.y + (rect.height - h) * 0.5f, w, h);
+        }
+
+        /// <summary>
+        /// 切片视图鼠标交互（folder_viewer #16/#19/#20/#17 的对应实现）：
+        /// 左键点击/拖拽 = 十字线定位（轴状视图设 X/Y，冠状视图设 X/Z，联动另一视图的切层）；
+        /// 右键拖拽 = 调窗（水平Δ×4→窗宽，垂直Δ×-2→窗位，与 web 一致）。
+        /// </summary>
+        private void HandleSliceViewEvents(Rect content, bool axial, Event guiEvent, float dataMin, float dataMax)
+        {
+            if (!content.Contains(guiEvent.mousePosition))
+                return;
+
+            bool leftDown = guiEvent.type == EventType.MouseDown && guiEvent.button == 0;
+            bool leftDrag = guiEvent.type == EventType.MouseDrag && guiEvent.button == 0;
+            bool rightDrag = guiEvent.type == EventType.MouseDrag && guiEvent.button == 1;
+
+            if (leftDown || leftDrag)
+            {
+                float u = Mathf.Clamp01((guiEvent.mousePosition.x - content.x) / content.width);
+                float v = Mathf.Clamp01(1f - (guiEvent.mousePosition.y - content.y) / content.height); // 屏幕向下为 v 减小
+                slicePosX = u;
+                if (axial)
+                    slicePosY = v;
+                else
+                    slicePosZ = v;
+                guiEvent.Use(); // 阻止 GUI.DragWindow 抢走拖拽
+            }
+            else if (rightDrag)
+            {
+                windowWidth = Mathf.Clamp(windowWidth + guiEvent.delta.x * 4f, 1f, Mathf.Max((dataMax - dataMin) * 2f, 2f));
+                windowCenter = Mathf.Clamp(windowCenter - guiEvent.delta.y * 2f, dataMin, dataMax);
+                guiEvent.Use();
+            }
+        }
+
+        /// <summary>在视图内容区画十字线（IMGUI 无画线 API，用 1px whiteTexture 拉伸）。</summary>
+        private static void DrawCrosshair(Rect content, float u, float v)
+        {
+            float x = content.x + u * content.width;
+            float y = content.y + (1f - v) * content.height;
+            Color prev = GUI.color;
+            GUI.color = new Color(1f, 0.92f, 0.23f, 0.85f); // 亮黄
+            GUI.DrawTexture(new Rect(content.x, y - 0.5f, content.width, 1f), Texture2D.whiteTexture, ScaleMode.StretchToFill, true);
+            GUI.DrawTexture(new Rect(x - 0.5f, content.y, 1f, content.height), Texture2D.whiteTexture, ScaleMode.StretchToFill, true);
+            GUI.color = prev;
         }
 
         private void OnDestroy()

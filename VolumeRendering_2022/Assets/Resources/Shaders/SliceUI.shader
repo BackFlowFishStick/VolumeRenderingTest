@@ -11,6 +11,10 @@ Shader "Hidden/UVR_SliceUI"
         _SecondaryDataTex("Segmentation Data (3D)", 3D) = "" {}
         _SecondaryTFTex("Segmentation TF Texture", 2D) = "white" {}
         _UseSegmentation("Use Segmentation Overlay", Float) = 0
+        _WindowCenter("Window Center (HU)", Float) = 0.5
+        _WindowWidth("Window Width (HU)", Float) = 1
+        _DataMin("Data Min Value", Float) = 0
+        _DataMax("Data Max Value", Float) = 1
     }
     SubShader
     {
@@ -47,6 +51,10 @@ Shader "Hidden/UVR_SliceUI"
             float _SlicePos;
             float _Axis;
             float _UseSegmentation;
+            float _WindowCenter;
+            float _WindowWidth;
+            float _DataMin;
+            float _DataMax;
 
             v2f vert(appdata v)
             {
@@ -64,7 +72,12 @@ Shader "Hidden/UVR_SliceUI"
                 else                    dataCoord = float3(i.uv.x, i.uv.y, _SlicePos);  // 沿 Z：横向（轴状向）
 
                 float dataVal = _DataTex.Sample(sampler_DataTex, dataCoord);
-                half4 col = _TFTex.Sample(sampler_TFTex, float2(dataVal, 0.0));
+
+                // 调窗（WW/WC）：把 HU 值域内的窗区间线性拉伸到 [0,1] 再查 TF。
+                // 中性窗（窗宽=数据全值域、窗位=中点）时 windowed == dataVal，外观与无窗一致。
+                float hu = dataVal * (_DataMax - _DataMin) + _DataMin;
+                float windowed = saturate((hu - (_WindowCenter - _WindowWidth * 0.5)) / max(_WindowWidth, 1e-3));
+                half4 col = _TFTex.Sample(sampler_TFTex, float2(windowed, 0.0));
 
                 // 分割叠加：该体素属于某个结构（第二传递函数 alpha>0）时，用结构色替换组织色。
                 // 与包 DVR 的逻辑一致（src = secondaryColour.a > 0 ? secondaryColour : src）。
